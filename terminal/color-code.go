@@ -14,6 +14,12 @@ const (
 	ColorBold    = "\033[1m"
 )
 
+// ANSI control sequences
+const (
+	ClearLine      = "\033[2K"  // Clear entire line
+	CarriageReturn = "\r"        // Move cursor to start of line
+)
+
 // Color type for reusable print functions
 type Color string
 
@@ -52,3 +58,12 @@ func PrintPath(format string, args ...interface{}) {
 	PrintColor(Magenta, format, args...)
 }
 
+// EnsureNewLine ensures we're on a fresh line at column 0
+func EnsureNewLine() {
+	fmt.Print("\r\n")
+}
+
+// ClearCurrentLine clears the current line and moves cursor to start
+func ClearCurrentLine() {
+	fmt.Print(CarriageReturn + ClearLine)
+}
