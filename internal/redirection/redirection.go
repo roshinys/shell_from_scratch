@@ -3,44 +3,66 @@ package redirection
 import (
 	"os"
 
-	"github.com/roshinys/shell-from-scratch/internal/parser"
+	"github.com/roshinys/shell-from-scratch/internal/command"
 )
 
-func Setup(command parser.Command) (func(), error) {
+func SetupRedirection(command command.Command) (func(), error) {
 	var oldStdout *os.File
 	var oldStderr *os.File
 
 	if command.Stdout != "" {
-		oldStdout = os.Stdout
-		var f *os.File
 		var err error
-		if command.StdoutAppend {
-			f, err = os.OpenFile(command.Stdout, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-		} else {
-			f, err = os.Create(command.Stdout)
-		}
+		oldStdout, err = redirectStdout(command)
 		if err != nil {
 			return nil, err
 		}
-		os.Stdout = f
 	}
 
 	if command.Stderr != "" {
-		oldStderr = os.Stderr
-		var f *os.File
 		var err error
-		if command.StderrAppend {
-			f, err = os.OpenFile(command.Stderr, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-		} else {
-			f, err = os.Create(command.Stderr)
-		}
+		oldStderr, err = redirectStderr(command)
 		if err != nil {
 			return nil, err
 		}
-		os.Stderr = f
 	}
 
-	cleanup := func() {
+	return createCleanupFunction(oldStdout, oldStderr), nil
+}
+
+func redirectStdout(command command.Command) (*os.File, error) {
+	oldStdout := os.Stdout
+	var f *os.File
+	var err error
+	if command.StdoutAppend {
+		f, err = os.OpenFile(command.Stdout, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	} else {
+		f, err = os.Create(command.Stdout)
+	}
+	if err != nil {
+		return nil, err
+	}
+	os.Stdout = f
+	return oldStdout, nil
+}
+
+func redirectStderr(command command.Command) (*os.File, error) {
+	oldStderr := os.Stderr
+	var f *os.File
+	var err error
+	if command.StderrAppend {
+		f, err = os.OpenFile(command.Stderr, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	} else {
+		f, err = os.Create(command.Stderr)
+	}
+	if err != nil {
+		return nil, err
+	}
+	os.Stderr = f
+	return oldStderr, nil
+}
+
+func createCleanupFunction(oldStdout *os.File, oldStderr *os.File) func() {
+	return func() {
 		if oldStdout != nil {
 			os.Stdout.Close()
 			os.Stdout = oldStdout
@@ -50,6 +72,6 @@ func Setup(command parser.Command) (func(), error) {
 			os.Stderr = oldStderr
 		}
 	}
-
-	return cleanup, nil
 }
+
+
