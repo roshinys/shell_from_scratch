@@ -54,15 +54,12 @@ func repl() {
 		if err != nil {
 			continue
 		}
-
 		fullCmd = strings.TrimSpace(fullCmd)
 		if fullCmd == "" {
 			continue
 		}
-
-		// pipeline := command.ParsePipeline(fullCmd)
-		command := command.ParseCommand(fullCmd)
-		command.ExecuteCommand()
+		pipeline := command.ParsePipeline(fullCmd)
+		pipeline.ExecutePipeline()
 	}
 }
 

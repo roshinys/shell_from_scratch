@@ -7,15 +7,20 @@ func ParsePipeline(input string) Pipeline {
 	inputParts := strings.Split(input,"|")
 	count := len(inputParts)
 	commands := []Command{}
+	isLastInPipeline := false
 	for i := 0; i < count; i++ {
-		commands = append(commands, ParseCommand(inputParts[i]))
+		if i == count -1 {
+			isLastInPipeline = true
+		}
+		commands = append(commands, ParseCommand(inputParts[i],isLastInPipeline))
 	}
 	return Pipeline{
 		Commands: commands,
+		isPipeline: isLastInPipeline,
 	}
 }
 
-func ParseCommand(input string) Command {
+func ParseCommand(input string,isLastInPipeline bool) Command {
 	isSingleQuote := false
 	isDoubleQuote := false
 	n := len(input)
@@ -58,7 +63,7 @@ func ParseCommand(input string) Command {
 	if len(tokens) == 0 {
 		return Command{}
 	}
-	return buildCommandFromTokens(tokens)
+	return buildCommandFromTokens(tokens,isLastInPipeline)
 }
 
 
@@ -96,23 +101,27 @@ func isDoubleQuoteToggle(char byte, isSingleQuote bool) bool {
 	return char == '"' && !isSingleQuote
 }
 
-func buildCommandFromTokens(tokens []string) Command {
+func buildCommandFromTokens(tokens []string,isLastInPipeline bool) Command {
 	cmd := Command{
 		Cmd: tokens[0],
 	}
 	args := []string{}
 	tokenLen := len(tokens)
-
 	for i := 1; i < tokenLen; i++ {
 		token := tokens[i]
 		switch token {
-		case ">", "1>":
-			cmd.Stdout = tokens[i+1]
-			cmd.StdoutAppend = false
+		case ">", "1>" :
+			if isLastInPipeline{
+				cmd.Stdout = tokens[i+1]
+				cmd.StdoutAppend = false
+			}
 			i++
+			
 		case ">>", "1>>":
-			cmd.Stdout = tokens[i+1]
-			cmd.StdoutAppend = true
+			if isLastInPipeline{
+				cmd.Stdout = tokens[i+1]
+				cmd.StdoutAppend = true
+			}
 			i++
 
 		case "2>":
@@ -129,6 +138,7 @@ func buildCommandFromTokens(tokens []string) Command {
 			args = append(args, token)
 		}
 	}
+
 	cmd.Args = args
 	return cmd
 }

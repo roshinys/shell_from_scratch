@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -14,42 +15,40 @@ import (
 type Command struct {
 	Cmd          string
 	Args         []string
-	Stdout       string
-	Stderr       string
+	Stdin      	 string // Standard os.Stdin
+	Stdout       string // FileNames
+	Stderr       string // FileNames
+	StdinAppend  bool
 	StdoutAppend bool
 	StderrAppend bool
 }
 
-type Pipeline struct{
-	Commands []Command
-}
 
-
-func (command *Command) ExecuteCommand() {
+func (command *Command) ExecuteCommand(input io.Reader,output io.Writer) {
 	if builtin.IsBuiltin(command.Cmd) {
-		command.ExecuteBuiltin()
+		command.ExecuteBuiltin(input,output)
 	} else {
-		command.ExecuteExternalCommand()
+		command.ExecuteExternalCommand(input,output)
 	}
 }
 
 
-func(command * Command) ExecuteBuiltin() {
+func(command * Command) ExecuteBuiltin(input io.Reader,output io.Writer) {
 	switch command.Cmd {
 	case "exit":
 		command.Exit()
 	case "echo":
-		command.Echo()
+		command.Echo(output)
 	case "type":		
-		command.Type()
+		command.Type(output)
 	case "pwd":
-		command.Pwd()
+		command.Pwd(output)
 	case "cd":
 		command.Cd()
 	}
 }
 
-func (command *Command) ExecuteExternalCommand() {
+func (command *Command) ExecuteExternalCommand(input io.Reader,output io.Writer) {
 	path, err := exec.LookPath(command.Cmd)
 	if err != nil {
 		terminal.PrintError("%s: command not found\n", command.Cmd)
@@ -57,15 +56,14 @@ func (command *Command) ExecuteExternalCommand() {
 	}
 
 	c := exec.Command(path, command.Args...)
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
+	c.Stdin = input
+	c.Stdout = output
 	c.Stderr = os.Stderr
 
 	if err := c.Run(); err != nil {
 		terminal.PrintError("Error executing %s: %v\n", command.Cmd, err)
 	}
 }
-
 
 func (command * Command) Cd() {
 	if err := command.ChangeDir(); err != nil {
@@ -85,36 +83,36 @@ func (command *Command) ChangeDir() error {
 	return nil
 }
 
-func (command *Command) Echo()(string, error) {
-	return strings.Join(command.Args, " "), nil
+func (command *Command) Echo(output io.Writer)(string, error) {
+	arg := strings.Join(command.Args, " ")
+    fmt.Fprintln(output, arg)
+	return arg,nil
 }
 
 func (command *Command) Exit() {
 	os.Exit(0)
 }
 
-func (command *Command) Type() {
+func (command *Command) Type(output io.Writer) {
 	if len(command.Args) == 0 {
 		terminal.PrintError("type: missing argument\n")
 		return
 	}
 	cmdToCheck := command.Args[0]
 	if builtin.Builtins[cmdToCheck] {
-		terminal.PrintSuccess("%s", cmdToCheck)
-		terminal.PrintInfo(" is a shell builtin\n")
+        fmt.Fprintf(output, "%s is a shell builtin\n", cmdToCheck)
 	} else if path, err := exec.LookPath(cmdToCheck); err == nil {
-		terminal.PrintSuccess("%s", cmdToCheck)
-		terminal.PrintPath(" is %s\n", path)
+        fmt.Fprintf(output, "%s is %s\n", cmdToCheck, path)
 	} else {
 		terminal.PrintError("%s: not found\n", cmdToCheck)
 	}
 }
 
-func (command *Command) Pwd() {
+func (command *Command) Pwd(output io.Writer) {
 	dir, err := os.Getwd()
 	if err != nil {
 		terminal.PrintError("pwd: %v\n", err)
-	} else {
-		terminal.PrintInfo("%s\n", dir)
-	}
+		return 
+	} 
+	fmt.Fprintf(output, "%s\n", dir)
 }
