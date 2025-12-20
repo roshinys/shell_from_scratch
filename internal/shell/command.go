@@ -1,10 +1,11 @@
-package command
+package shell
 
 import (
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/roshinys/shell-from-scratch/internal/builtin"
@@ -24,16 +25,16 @@ type Command struct {
 }
 
 
-func (command *Command) ExecuteCommand(input io.Reader,output io.Writer) {
+func (command *Command) ExecuteCommand(input io.Reader,output io.Writer,s *Shell) {
 	if builtin.IsBuiltin(command.Cmd) {
-		command.ExecuteBuiltin(input,output)
+		command.ExecuteBuiltin(input,output,s)
 	} else {
 		command.ExecuteExternalCommand(input,output)
 	}
 }
 
 
-func(command * Command) ExecuteBuiltin(input io.Reader,output io.Writer) {
+func(command * Command) ExecuteBuiltin(input io.Reader,output io.Writer,s *Shell) {
 	switch command.Cmd {
 	case "exit":
 		command.Exit()
@@ -45,7 +46,23 @@ func(command * Command) ExecuteBuiltin(input io.Reader,output io.Writer) {
 		command.Pwd(output)
 	case "cd":
 		command.Cd()
+	case "history":
+		command.History(output,s)
+	
 	}
+}
+
+func (command *Command) History(output io.Writer, s *Shell) error{
+	k := -1
+	if len(command.Args) >= 1{
+		m,err := strconv.Atoi(command.Args[0])
+		if err != nil {
+			terminal.PrintError("Error executing %s: %v\n", command.Cmd, err)
+		}
+		k = m 
+	}
+	s.GetHistory(output,k)
+	return nil 
 }
 
 func (command *Command) ExecuteExternalCommand(input io.Reader,output io.Writer) {
@@ -116,3 +133,4 @@ func (command *Command) Pwd(output io.Writer) {
 	} 
 	fmt.Fprintf(output, "%s\n", dir)
 }
+

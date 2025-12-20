@@ -7,6 +7,7 @@ var Builtins = map[string]bool{
 	"type": true,
 	"pwd":  true,
 	"cd":   true,
+	"history": true,
 }
 
 var ExternalBuiltins = make(map[string]bool)

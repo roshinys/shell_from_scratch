@@ -3,10 +3,10 @@ package redirection
 import (
 	"os"
 
-	"github.com/roshinys/shell-from-scratch/internal/command"
+	"github.com/roshinys/shell-from-scratch/internal/shell"
 )
 
-func SetupRedirection(command command.Command) (func(), error) {
+func SetupRedirection(command shell.Command) (func(), error) {
 	var oldStdout *os.File
 	var oldStderr *os.File
 
@@ -29,7 +29,7 @@ func SetupRedirection(command command.Command) (func(), error) {
 	return createCleanupFunction(oldStdout, oldStderr), nil
 }
 
-func redirectStdout(command command.Command) (*os.File, error) {
+func redirectStdout(command shell.Command) (*os.File, error) {
 	oldStdout := os.Stdout
 	var f *os.File
 	var err error
@@ -45,7 +45,7 @@ func redirectStdout(command command.Command) (*os.File, error) {
 	return oldStdout, nil
 }
 
-func redirectStderr(command command.Command) (*os.File, error) {
+func redirectStderr(command shell.Command) (*os.File, error) {
 	oldStderr := os.Stderr
 	var f *os.File
 	var err error

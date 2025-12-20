@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	"github.com/roshinys/shell-from-scratch/internal/builtin"
+	"github.com/roshinys/shell-from-scratch/internal/shell"
 	"github.com/roshinys/shell-from-scratch/internal/terminal"
 	"golang.org/x/term"
 )
 
-func ReadLineWithTabCompletion() (string, error) {
+func ReadLineWithTabCompletion(s *shell.Shell) (string, error) {
 	fd := int(os.Stdin.Fd())
 	oldState, err := term.MakeRaw(fd)
 	if err != nil {
@@ -21,6 +22,9 @@ func ReadLineWithTabCompletion() (string, error) {
 	buf := make([]byte, 1)
 	currCmd := ""
 	lastWasTab := false
+	n := len(s.History)
+	historyIndex := n // start at the end
+
 
 	for {
 		n, err := os.Stdin.Read(buf)
@@ -45,6 +49,21 @@ func ReadLineWithTabCompletion() (string, error) {
 			lastWasTab = false
 			continue
 		}
+		if isUpArrow(char){
+			if historyIndex > 0 {
+				historyIndex--
+				currCmd = s.History[historyIndex]
+				refreshLine(currCmd)
+			}
+		}
+
+		if isDownArrow(char){
+			if historyIndex < n-1 {
+				historyIndex++
+				currCmd = s.History[historyIndex]
+				refreshLine(currCmd)
+			}
+		}
 
 		if isTabKey(char) {
 			currCmd, lastWasTab = handleTabCompletion(currCmd, lastWasTab)
@@ -59,9 +78,23 @@ func ReadLineWithTabCompletion() (string, error) {
 	}
 }
 
+func refreshLine(cmd string) {
+	fmt.Print("\r\033[K") // move cursor to start + clear line
+	PrintPrompt()          // reprint the prompt
+	fmt.Print(cmd)         // print the current command
+}
+
 
 func isEnterKey(char byte) bool {
 	return char == '\r' || char == '\n'
+}
+
+func isUpArrow(char byte) bool {
+	return char == 'W'
+}
+
+func isDownArrow(char byte) bool {
+	return char == 'S'
 }
 
 func isInterruptKey(char byte) bool {
@@ -77,7 +110,7 @@ func isTabKey(char byte) bool {
 }
 
 func isPrintableChar(char byte) bool {
-	return char >= 32 && char < 127
+	return char >= 32 && char < 127 && char !='W' && char != 'S'
 }
 
 func handleBackspace(currCmd string) string {
